@@ -9,6 +9,7 @@ import streamlit as st
 from guided_smm import sidebar, guide, home, help_page
 from content_planner import render_content_planner
 from social_inbox import init_inbox, render_social_inbox
+from analytics_visuals import render_analytics_dashboard
 
 DB = Path(__file__).with_name('smm_studio.db')
 PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Pinterest', 'YouTube', 'Discord', 'Reddit', 'Twitch']
@@ -227,14 +228,7 @@ elif section == 'Analytics & Reports':
             write('INSERT INTO metrics(brand_id,platform,period,impressions,engagements,followers,notes) VALUES(?,?,?,?,?,?,?)', (brand_id,platform,period.strip(),int(impressions),int(engagements),int(followers),notes.strip()))
             st.success('Metrics saved.'); st.rerun()
     records = rows('''SELECT m.id,b.name AS brand,m.platform,m.period,m.impressions,m.engagements,m.followers,m.notes FROM metrics m JOIN brands b ON b.id=m.brand_id ORDER BY m.id DESC''')
-    show_table(records)
-    export_csv(records, 'smm_metrics_report.csv')
-    if records:
-        st.subheader('Recorded totals')
-        a,b = st.columns(2)
-        a.metric('Recorded impressions', sum(r['impressions'] for r in records))
-        b.metric('Recorded engagements', sum(r['engagements'] for r in records))
-        st.caption('Totals sum all entered records; overlapping periods or repeated entries may double-count.')
+    render_analytics_dashboard(records, export_csv)
 
 elif section == 'Moderation Coordination':
     st.header('Moderation Coordination')
