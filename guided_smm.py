@@ -6,7 +6,7 @@ import streamlit as st
 GROUPS = {
     "OVERVIEW": ["Home"],
     "CLIENTS & PLANNING": ["Brands", "Content Planner", "Content Calendar", "Content Library", "Campaigns"],
-    "PERFORMANCE & SAFETY": ["Analytics & Reports", "Moderation Coordination"],
+    "PERFORMANCE & SAFETY": ["Social Inbox", "Analytics & Reports", "Moderation Coordination"],
     "SUPPORT": ["Guides & Help"],
 }
 GUIDES = {
@@ -15,6 +15,7 @@ GUIDES = {
     "Content Calendar": ("Plan upcoming content", "Choose a brand and platform, write a draft, set its date, then track its approval status. Saving a post does not publish it.", "Content Library"),
     "Content Library": ("Organize creative work", "Save captions, hashtags and asset references. Use status updates to move drafts through approval.", "Campaigns"),
     "Campaigns": ("Coordinate campaigns", "Create a campaign with a clear goal, dates and status. Track related content in the calendar.", "Analytics & Reports"),
+    "Social Inbox": ("Track social interactions", "Add fictional interaction references, assign tasks, prioritize follow-ups and track resolution. This is a manual inbox, not a live social connection.", "Moderation Coordination"),
     "Analytics & Reports": ("Understand performance", "Record authorized platform metrics manually and export CSV reports. No live social analytics are connected.", "Moderation Coordination"),
     "Moderation Coordination": ("Track safety referrals", "Keep non-sensitive internal references and follow-up statuses here. Handle detailed reviews in your separate Trust & Safety Studio.", "Home"),
 }
