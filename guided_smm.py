@@ -72,7 +72,8 @@ def home(rows):
     st.subheader("Upcoming content")
     upcoming = rows("""SELECT b.name AS brand,p.platform,p.publish_date,p.caption,p.status
                        FROM posts p JOIN brands b ON b.id=p.brand_id
-                       WHERE p.publish_date>=? ORDER BY p.publish_date LIMIT 12""", (date.today().isoformat(),))
+                       WHERE p.publish_date >= %s ORDER BY p.publish_date LIMIT 12""", (date.today().isoformat(),))
+
     if upcoming:
         st.dataframe(upcoming, use_container_width=True, hide_index=True)
     else:

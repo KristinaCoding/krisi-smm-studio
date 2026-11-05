@@ -74,7 +74,7 @@ def render_content_planner(rows, write, export_csv):
             next_date = st.date_input("Planned date", value=date.fromisoformat(item["publish_date"]))
             save = st.form_submit_button("Save changes")
         if save:
-            write("UPDATE posts SET status=?, publish_date=? WHERE id=?",
+            write("UPDATE posts SET status=%s, publish_date=%s WHERE id=%s",
                   (next_status, next_date.isoformat(), post_id))
             st.success("Post updated.")
             st.rerun()

@@ -7,3 +7,10 @@ venv/
 *.db
 *.db-shm
 *.db-wal
+.neon
+
+.env.local
+
+neon-skill-reference.md
+
+.streamlit/secrets.toml

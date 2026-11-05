@@ -8,22 +8,9 @@ PRIORITIES = ["Low", "Normal", "High"]
 TYPES = ["Comment", "Message", "Mention", "Review", "Other"]
 
 def init_inbox(connect):
-    with connect() as db:
-        db.execute("""
-        CREATE TABLE IF NOT EXISTS social_inbox (
-            id INTEGER PRIMARY KEY,
-            brand_id INTEGER NOT NULL REFERENCES brands(id),
-            platform TEXT NOT NULL,
-            item_type TEXT NOT NULL,
-            reference TEXT NOT NULL,
-            summary TEXT NOT NULL,
-            assigned_to TEXT NOT NULL DEFAULT '',
-            priority TEXT NOT NULL DEFAULT 'Normal',
-            status TEXT NOT NULL DEFAULT 'New',
-            due_date TEXT,
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )""")
+    # The social_inbox table is initialized
+    # through schema_postgres.sql in database.py.
+    pass
 
 def render_social_inbox(rows, write, export_csv):
     st.header("Social Inbox & Tasks")
@@ -56,7 +43,7 @@ def render_social_inbox(rows, write, export_csv):
                 write("""INSERT INTO social_inbox
                          (brand_id, platform, item_type, reference, summary,
                           assigned_to, priority, status, due_date, notes)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                       (brand_id, platform, item_type, reference.strip(), summary.strip(),
                        assigned.strip(), priority, status, due.isoformat(), notes.strip()))
                 st.success("Inbox item saved.")
@@ -104,8 +91,8 @@ def render_social_inbox(rows, write, export_csv):
             update = st.form_submit_button("Save follow-up")
         if update:
             write("""UPDATE social_inbox
-                     SET status=?, priority=?, assigned_to=?, notes=?
-                     WHERE id=?""",
+                     SET status=%, priority=%, assigned_to=%, notes=%
+                     WHERE id=%""",
                   (next_status, next_priority, next_assignee.strip(), next_notes.strip(), selected))
             st.success("Follow-up updated.")
             st.rerun()
