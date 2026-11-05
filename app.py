@@ -7,6 +7,7 @@ from pathlib import Path
 
 import streamlit as st
 from guided_smm import sidebar, guide, home, help_page
+from content_planner import render_content_planner
 
 DB = Path(__file__).with_name('smm_studio.db')
 PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Pinterest', 'YouTube', 'Discord', 'Reddit', 'Twitch']
@@ -132,6 +133,9 @@ elif section == 'Dashboard':
         col.metric(label, n)
     st.subheader('Upcoming content')
     show_table(rows('''SELECT b.name AS brand,p.platform,p.publish_date,p.caption,p.status FROM posts p JOIN brands b ON b.id=p.brand_id WHERE p.publish_date>=? ORDER BY p.publish_date LIMIT 15''', (date.today().isoformat(),)))
+
+elif section == 'Content Planner':
+    render_content_planner(rows, write, export_csv)
 
 elif section == 'Brands':
     st.header('Client & Brand Manager')
