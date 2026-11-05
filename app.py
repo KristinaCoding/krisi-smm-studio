@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 import streamlit as st
+from guided_smm import sidebar, guide, home, help_page
 
 DB = Path(__file__).with_name('smm_studio.db')
 PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Pinterest', 'YouTube', 'Discord', 'Reddit', 'Twitch']
@@ -80,7 +81,8 @@ html,body,[data-testid="stAppViewContainer"],.stApp {background:#120d11!importan
 [data-testid="stSidebar"] {background:#1c1219!important;border-right:1px solid #6b4a45;}
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {color:#e8d6c7;}
 [data-testid="stSidebar"] [role="radiogroup"] label {padding:.52rem .7rem;border-radius:.3rem;}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {background:#422333;border:1px solid #a88862;}
+[data-testid="stSidebar"] .smm-nav-group {color:#c9a979;font-size:.69rem;letter-spacing:.15em;font-weight:700;margin:1.25rem 0 .35rem;}
+[data-testid="stSidebar"] button {text-align:left;justify-content:flex-start;}
 .block-container {max-width:1420px;padding-top:2rem;padding-bottom:5rem;}
 html,body,p,label,input,textarea,button {font-family:'DM Sans',sans-serif;}
 h1,h2,h3,h4 {font-family:'Playfair Display',Georgia,serif!important;color:#f1e1d1!important;}
@@ -108,14 +110,21 @@ st.markdown("""
   <div class="krisi-eyebrow">KRISI.SITE &nbsp; / &nbsp; CREATIVE OPERATIONS</div>
   <h1>Social Media <em>Studio</em></h1>
   <p>A thoughtful workspace for brands, editorial planning, campaigns and insights.</p>
-  <div class="krisi-hero-footer"><span>● LOCAL PROTOTYPE</span><span>VERSION 1.1 · DARK ACADEMIA</span></div>
+  <div class="krisi-hero-footer"><span>● LOCAL PROTOTYPE</span><span>VERSION 2.0 PREVIEW · DARK ACADEMIA</span></div>
 </div>
 """, unsafe_allow_html=True)
 st.caption('Private local prototype · Fictional demonstration information only · No automatic publishing')
-section = st.sidebar.radio('Workspace', ['Dashboard', 'Brands', 'Content Calendar', 'Content Library', 'Campaigns', 'Analytics & Reports', 'Moderation Coordination'])
-st.sidebar.caption('No social platform integrations or automated publishing. Moderation referrals are manual records only.')
+section = sidebar()
+if section not in ('Home', 'Guides & Help'):
+    guide(section)
 
-if section == 'Dashboard':
+if section == 'Home':
+    home(rows)
+
+elif section == 'Guides & Help':
+    help_page()
+
+elif section == 'Dashboard':
     st.header('Dashboard')
     counts = [rows(f'SELECT COUNT(*) AS n FROM {table}')[0]['n'] for table in ('brands', 'posts', 'campaigns', 'referrals')]
     cols = st.columns(4)
