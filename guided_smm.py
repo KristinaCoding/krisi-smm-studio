@@ -5,12 +5,13 @@ import streamlit as st
 
 GROUPS = {
     "OVERVIEW": ["Home"],
-    "CLIENTS & PLANNING": ["Brands", "Content Calendar", "Content Library", "Campaigns"],
+    "CLIENTS & PLANNING": ["Brands", "Content Planner", "Content Calendar", "Content Library", "Campaigns"],
     "PERFORMANCE & SAFETY": ["Analytics & Reports", "Moderation Coordination"],
     "SUPPORT": ["Guides & Help"],
 }
 GUIDES = {
     "Brands": ("Create your client workspace", "Add a fictional brand and client alias first. Every post, campaign and report belongs to a brand.", "Content Calendar"),
+    "Content Planner": ("Review your publishing queue", "Browse the monthly calendar, filter by client, platform or approval status, and update planned dates. Publishing remains manual.", "Content Calendar"),
     "Content Calendar": ("Plan upcoming content", "Choose a brand and platform, write a draft, set its date, then track its approval status. Saving a post does not publish it.", "Content Library"),
     "Content Library": ("Organize creative work", "Save captions, hashtags and asset references. Use status updates to move drafts through approval.", "Campaigns"),
     "Campaigns": ("Coordinate campaigns", "Create a campaign with a clear goal, dates and status. Track related content in the calendar.", "Analytics & Reports"),
@@ -63,7 +64,7 @@ def home(rows):
     elif counts[1] == 0:
         target, message = "Content Calendar", "Your brand is ready. Plan your first content draft."
     else:
-        target, message = "Content Calendar", "Review upcoming content and update approval statuses."
+        target, message = "Content Planner", "Review upcoming content and update approval statuses."
     st.info(message)
     if st.button("Go to " + target, key="home_next", type="primary"):
         navigate(target)
@@ -77,12 +78,12 @@ def home(rows):
         st.caption("No upcoming posts yet. Create a draft in Content Calendar.")
     st.subheader("Quick actions")
     cols = st.columns(3)
-    for col, label, target in zip(cols, ["Plan content", "Manage clients", "View reports"], ["Content Calendar", "Brands", "Analytics & Reports"]):
+    for col, label, target in zip(cols, ["Plan content", "Manage clients", "View reports"], ["Content Planner", "Brands", "Analytics & Reports"]):
         with col:
             if st.button(label, key="quick_" + target, use_container_width=True):
                 navigate(target)
     with st.expander("Your SMM workflow"):
-        st.markdown("**1. Brands** → **2. Content Calendar** → **3. Content Library & approval** → **4. Campaigns** → **5. Analytics & Reports**")
+        st.markdown("**1. Brands** → **2. Content Calendar** → **3. Content Planner & approval** → **4. Campaigns** → **5. Analytics & Reports**")
         st.caption("Moderation Coordination supports the workflow with manual, non-sensitive referrals.")
 
 def help_page():
