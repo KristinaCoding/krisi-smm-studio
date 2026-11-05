@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 from guided_smm import sidebar, guide, home, help_page
 from content_planner import render_content_planner
+from social_inbox import init_inbox, render_social_inbox
 
 DB = Path(__file__).with_name('smm_studio.db')
 PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Pinterest', 'YouTube', 'Discord', 'Reddit', 'Twitch']
@@ -73,6 +74,7 @@ def export_csv(records, filename):
 
 st.set_page_config(page_title='krisi.site SMM Studio', page_icon='📅', layout='wide')
 init_db()
+init_inbox(connect)
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
@@ -133,6 +135,9 @@ elif section == 'Dashboard':
         col.metric(label, n)
     st.subheader('Upcoming content')
     show_table(rows('''SELECT b.name AS brand,p.platform,p.publish_date,p.caption,p.status FROM posts p JOIN brands b ON b.id=p.brand_id WHERE p.publish_date>=? ORDER BY p.publish_date LIMIT 15''', (date.today().isoformat(),)))
+
+elif section == 'Social Inbox':
+    render_social_inbox(rows, write, export_csv)
 
 elif section == 'Content Planner':
     render_content_planner(rows, write, export_csv)
