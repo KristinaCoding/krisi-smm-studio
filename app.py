@@ -60,6 +60,32 @@ def export_csv(records, filename):
 
 
 st.set_page_config(page_title='krisi.site SMM Studio', page_icon='📅', layout='wide')
+# KRISI SMM Studio v2.1 — Google Authentication
+
+if not st.user.is_logged_in:
+    st.title("KRISI SMM Studio")
+    st.subheader("Secure Administrator Login")
+    st.info("Please sign in with your authorised Google account.")
+
+    if st.button("Sign in with Google"):
+        st.login()
+
+    st.stop()
+
+# Allow access only to the configured administrator.
+admin_email = st.secrets.get("ADMIN_EMAIL", "").strip().lower()
+user_email = str(st.user.get("email", "")).strip().lower()
+
+if not admin_email or not user_email or user_email != admin_email:
+    st.error("Access denied. This Google account is not authorised.")
+    if st.button("Sign out"):
+        st.logout()
+    st.stop()
+
+with st.sidebar:
+    st.caption(f"Signed in as {user_email}")
+    if st.button("Sign out", key="krisi_logout"):
+        st.logout()
 init_db()
 init_inbox(connect)
 st.markdown("""
