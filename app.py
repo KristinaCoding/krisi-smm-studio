@@ -1,42 +1,32 @@
 """krisi.site SMM Studio v1.0 — local, fictional-data prototype."""
 import csv
 import io
-import sqlite3
+import psycopg
+from database import connect, init_db
 from datetime import date
 from pathlib import Path
 
 import streamlit as st
+from guided_smm import sidebar, guide, home, help_page
+from content_planner import render_content_planner
+from social_inbox import init_inbox, render_social_inbox
+from analytics_visuals import render_analytics_dashboard
 
 DB = Path(__file__).with_name('smm_studio.db')
 PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Pinterest', 'YouTube', 'Discord', 'Reddit', 'Twitch']
 
 
-def connect():
-    c = sqlite3.connect(DB)
-    c.row_factory = sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON')
-    return c
-
-
-def init_db():
-    with connect() as c:
-        c.executescript('''
-        CREATE TABLE IF NOT EXISTS brands (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, client_alias TEXT NOT NULL, notes TEXT DEFAULT '');
-        CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, brand_id INTEGER NOT NULL REFERENCES brands(id), platform TEXT NOT NULL, publish_date TEXT NOT NULL, caption TEXT NOT NULL, hashtags TEXT DEFAULT '', asset_ref TEXT DEFAULT '', status TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-        CREATE TABLE IF NOT EXISTS campaigns (id INTEGER PRIMARY KEY, brand_id INTEGER NOT NULL REFERENCES brands(id), title TEXT NOT NULL, goal TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL, status TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS metrics (id INTEGER PRIMARY KEY, brand_id INTEGER NOT NULL REFERENCES brands(id), platform TEXT NOT NULL, period TEXT NOT NULL, impressions INTEGER NOT NULL, engagements INTEGER NOT NULL, followers INTEGER NOT NULL, notes TEXT DEFAULT '');
-        CREATE TABLE IF NOT EXISTS referrals (id INTEGER PRIMARY KEY, brand_id INTEGER NOT NULL REFERENCES brands(id), platform TEXT NOT NULL, reference TEXT NOT NULL, category TEXT NOT NULL, priority TEXT NOT NULL, status TEXT NOT NULL, notes TEXT DEFAULT '', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-        ''')
-
-
 def rows(query, params=()):
-    with connect() as c:
-        return [dict(r) for r in c.execute(query, params).fetchall()]
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
 
 
 def write(query, params):
-    with connect() as c:
-        c.execute(query, params)
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
 
 
 def show_table(records, empty='No records yet.'):
@@ -70,17 +60,45 @@ def export_csv(records, filename):
 
 
 st.set_page_config(page_title='krisi.site SMM Studio', page_icon='📅', layout='wide')
+# KRISI SMM Studio v2.1 — Google Authentication
+
+if not st.user.is_logged_in:
+    st.title("KRISI SMM Studio")
+    st.subheader("Secure Administrator Login")
+    st.info("Please sign in with your authorised Google account.")
+
+    if st.button("Sign in with Google"):
+        st.login()
+
+    st.stop()
+
+# Allow access only to the configured administrator.
+admin_email = st.secrets.get("ADMIN_EMAIL", "").strip().lower()
+user_email = str(st.user.get("email", "")).strip().lower()
+
+if not admin_email or not user_email or user_email != admin_email:
+    st.error("Access denied. This Google account is not authorised.")
+    if st.button("Sign out"):
+        st.logout()
+    st.stop()
+
+with st.sidebar:
+    st.caption(f"Signed in as {user_email}")
+    if st.button("Sign out", key="krisi_logout"):
+        st.logout()
 init_db()
+init_inbox(connect)
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2%family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
 :root {color-scheme: dark;}
 html,body,[data-testid="stAppViewContainer"],.stApp {background:#120d11!important;color:#efe4d9;}
 [data-testid="stHeader"] {background:rgba(18,13,17,.88)!important;}
 [data-testid="stSidebar"] {background:#1c1219!important;border-right:1px solid #6b4a45;}
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {color:#e8d6c7;}
 [data-testid="stSidebar"] [role="radiogroup"] label {padding:.52rem .7rem;border-radius:.3rem;}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {background:#422333;border:1px solid #a88862;}
+[data-testid="stSidebar"] .smm-nav-group {color:#c9a979;font-size:.69rem;letter-spacing:.15em;font-weight:700;margin:1.25rem 0 .35rem;}
+[data-testid="stSidebar"] button {text-align:left;justify-content:flex-start;}
 .block-container {max-width:1420px;padding-top:2rem;padding-bottom:5rem;}
 html,body,p,label,input,textarea,button {font-family:'DM Sans',sans-serif;}
 h1,h2,h3,h4 {font-family:'Playfair Display',Georgia,serif!important;color:#f1e1d1!important;}
@@ -108,21 +126,34 @@ st.markdown("""
   <div class="krisi-eyebrow">KRISI.SITE &nbsp; / &nbsp; CREATIVE OPERATIONS</div>
   <h1>Social Media <em>Studio</em></h1>
   <p>A thoughtful workspace for brands, editorial planning, campaigns and insights.</p>
-  <div class="krisi-hero-footer"><span>● LOCAL PROTOTYPE</span><span>VERSION 1.1 · DARK ACADEMIA</span></div>
+  <div class="krisi-hero-footer"><span>● LOCAL PROTOTYPE</span><span>VERSION 2.0 PREVIEW · DARK ACADEMIA</span></div>
 </div>
 """, unsafe_allow_html=True)
 st.caption('Private local prototype · Fictional demonstration information only · No automatic publishing')
-section = st.sidebar.radio('Workspace', ['Dashboard', 'Brands', 'Content Calendar', 'Content Library', 'Campaigns', 'Analytics & Reports', 'Moderation Coordination'])
-st.sidebar.caption('No social platform integrations or automated publishing. Moderation referrals are manual records only.')
+section = sidebar()
+if section not in ('Home', 'Guides & Help'):
+    guide(section)
 
-if section == 'Dashboard':
+if section == 'Home':
+    home(rows)
+
+elif section == 'Guides & Help':
+    help_page()
+
+elif section == 'Dashboard':
     st.header('Dashboard')
     counts = [rows(f'SELECT COUNT(*) AS n FROM {table}')[0]['n'] for table in ('brands', 'posts', 'campaigns', 'referrals')]
     cols = st.columns(4)
     for col, label, n in zip(cols, ['Brands', 'Planned posts', 'Campaigns', 'Moderation referrals'], counts):
         col.metric(label, n)
     st.subheader('Upcoming content')
-    show_table(rows('''SELECT b.name AS brand,p.platform,p.publish_date,p.caption,p.status FROM posts p JOIN brands b ON b.id=p.brand_id WHERE p.publish_date>=? ORDER BY p.publish_date LIMIT 15''', (date.today().isoformat(),)))
+    show_table(rows('''SELECT b.name AS brand,p.platform,p.publish_date,p.caption,p.status FROM posts p JOIN brands b ON b.id=p.brand_id WHERE p.publish_date>=%s ORDER BY p.publish_date LIMIT 15''', (date.today().isoformat(),)))
+
+elif section == 'Social Inbox':
+    render_social_inbox(rows, write, export_csv)
+
+elif section == 'Content Planner':
+    render_content_planner(rows, write, export_csv)
 
 elif section == 'Brands':
     st.header('Client & Brand Manager')
@@ -136,10 +167,11 @@ elif section == 'Brands':
             st.error('Brand name and client alias are required.')
         else:
             try:
-                write('INSERT INTO brands(name,client_alias,notes) VALUES(?,?,?)', (name.strip(), alias.strip(), notes.strip()))
+                write('INSERT INTO brands(name,client_alias,notes) VALUES(%s,%s,%s)',
+                      (name.strip(), alias.strip(), notes.strip()))
                 st.success('Brand created.'); st.rerun()
-            except sqlite3.IntegrityError:
-                st.error('That brand name already exists.')
+            except psycopg.errors.UniqueViolation:
+               st.error('That brand name already exists.')
     show_table(rows('SELECT id,name,client_alias,notes FROM brands ORDER BY id DESC'))
 
 elif section in ('Content Calendar', 'Content Library'):
@@ -158,7 +190,7 @@ elif section in ('Content Calendar', 'Content Library'):
         if not caption.strip():
             st.error('Enter a caption or draft.')
         else:
-            write('INSERT INTO posts(brand_id,platform,publish_date,caption,hashtags,asset_ref,status) VALUES(?,?,?,?,?,?,?)', (brand_id,platform,planned.isoformat(),caption.strip(),hashtags.strip(),asset.strip(),status))
+            write('INSERT INTO posts(brand_id,platform,publish_date,caption,hashtags,asset_ref,status) VALUES(%s,%s,%s,%s,%s,%s,%s)', (brand_id,platform,planned.isoformat(),caption.strip(),hashtags.strip(),asset.strip(),status))
             st.success('Content saved.'); st.rerun()
     st.subheader('Saved content')
     records = rows('''SELECT p.id,b.name AS brand,p.platform,p.publish_date,p.caption,p.hashtags,p.asset_ref,p.status FROM posts p JOIN brands b ON b.id=p.brand_id ORDER BY p.publish_date DESC,p.id DESC''')
@@ -170,7 +202,7 @@ elif section in ('Content Calendar', 'Content Library'):
             pid = st.selectbox('Content ID', ids)
             new_status = st.selectbox('New status', ['Idea', 'Draft', 'Awaiting approval', 'Approved', 'Published manually'], key='update_post_status')
             if st.button('Update content status'):
-                write('UPDATE posts SET status=? WHERE id=?', (new_status,pid)); st.success('Updated.'); st.rerun()
+                write('UPDATE posts SET status=%s WHERE id=%s', (new_status,pid)); st.success('Updated.'); st.rerun()
 
 elif section == 'Campaigns':
     st.header('Campaign Manager')
@@ -186,7 +218,7 @@ elif section == 'Campaigns':
         if not title.strip() or not goal.strip() or end < start:
             st.error('Enter a title and goal, and ensure the end date is not before the start date.')
         else:
-            write('INSERT INTO campaigns(brand_id,title,goal,start_date,end_date,status) VALUES(?,?,?,?,?,?)', (brand_id,title.strip(),goal.strip(),start.isoformat(),end.isoformat(),status))
+            write('INSERT INTO campaigns(brand_id,title,goal,start_date,end_date,status) VALUES(%s,%s,%s,%s,%s,%s)', (brand_id,title.strip(),goal.strip(),start.isoformat(),end.isoformat(),status))
             st.success('Campaign saved.'); st.rerun()
     show_table(rows('''SELECT c.id,b.name AS brand,c.title,c.goal,c.start_date,c.end_date,c.status FROM campaigns c JOIN brands b ON b.id=c.brand_id ORDER BY c.id DESC'''))
 
@@ -206,17 +238,10 @@ elif section == 'Analytics & Reports':
         if not period.strip():
             st.error('Reporting period is required.')
         else:
-            write('INSERT INTO metrics(brand_id,platform,period,impressions,engagements,followers,notes) VALUES(?,?,?,?,?,?,?)', (brand_id,platform,period.strip(),int(impressions),int(engagements),int(followers),notes.strip()))
+            write('INSERT INTO metrics(brand_id,platform,period,impressions,engagements,followers,notes) VALUES(%s,%s,%s,%s,%s,%s,%s)', (brand_id,platform,period.strip(),int(impressions),int(engagements),int(followers),notes.strip()))
             st.success('Metrics saved.'); st.rerun()
     records = rows('''SELECT m.id,b.name AS brand,m.platform,m.period,m.impressions,m.engagements,m.followers,m.notes FROM metrics m JOIN brands b ON b.id=m.brand_id ORDER BY m.id DESC''')
-    show_table(records)
-    export_csv(records, 'smm_metrics_report.csv')
-    if records:
-        st.subheader('Recorded totals')
-        a,b = st.columns(2)
-        a.metric('Recorded impressions', sum(r['impressions'] for r in records))
-        b.metric('Recorded engagements', sum(r['engagements'] for r in records))
-        st.caption('Totals sum all entered records; overlapping periods or repeated entries may double-count.')
+    render_analytics_dashboard(records, export_csv)
 
 elif section == 'Moderation Coordination':
     st.header('Moderation Coordination')
@@ -234,7 +259,7 @@ elif section == 'Moderation Coordination':
         if not reference.strip():
             st.error('Provide a fictional internal reference.')
         else:
-            write('INSERT INTO referrals(brand_id,platform,reference,category,priority,status,notes) VALUES(?,?,?,?,?,?,?)', (brand_id,platform,reference.strip(),category,priority,status,notes.strip()))
+            write('INSERT INTO referrals(brand_id,platform,reference,category,priority,status,notes) VALUES(%s,%s,%s,%s,%s,%s,%s)', (brand_id,platform,reference.strip(),category,priority,status,notes.strip()))
             st.success('Referral saved.'); st.rerun()
     records = rows('''SELECT r.id,b.name AS brand,r.platform,r.reference,r.category,r.priority,r.status,r.notes FROM referrals r JOIN brands b ON b.id=r.brand_id ORDER BY r.id DESC''')
     show_table(records)
@@ -244,4 +269,4 @@ elif section == 'Moderation Coordination':
             rid = st.selectbox('Referral ID', [r['id'] for r in records])
             status = st.selectbox('New referral status', ['Open', 'Referred to Trust & Safety', 'Resolved'], key='update_referral_status')
             if st.button('Update referral'):
-                write('UPDATE referrals SET status=? WHERE id=?', (status,rid)); st.success('Updated.'); st.rerun()
+                write('UPDATE referrals SET status=%s WHERE id=%s', (status,rid)); st.success('Updated.'); st.rerun()
